@@ -52,11 +52,11 @@ let D = null;
 
 // Fit the chart so the whole widget fills the iframe exactly (no inner scrollbar).
 function render() {
-  const tryH = D.h0 || 260;
+  const tryH = D.h0 || 180;
   D.h = tryH;
   PHWidget(root, D, WIDGET_CSS);
   const overhead = root.getBoundingClientRect().height - tryH;
-  const fit = Math.round(Math.max(140, Math.min(640, innerHeight - overhead - 2)));
+  const fit = Math.round(Math.max(110, Math.min(400, innerHeight - overhead - 2)));
   if (Math.abs(fit - tryH) > 2) { D.h = fit; PHWidget(root, D, WIDGET_CSS); }
 }
 
@@ -66,8 +66,20 @@ addEventListener('resize', () => {
   lastW = innerWidth; lastH = innerHeight; render();
 });
 
-load().then(data => {
-  D = data; D.h0 = data.h || 260; lastW = innerWidth; lastH = innerHeight; render();
+function loadFont(name) {
+  if (!name) return Promise.resolve();
+  const l = document.createElement('link');
+  l.rel = 'stylesheet';
+  l.href = 'https://fonts.googleapis.com/css2?family=' + encodeURIComponent(name).replace(/%20/g, '+') + ':wght@400;700&display=swap';
+  document.head.appendChild(l);
+  // Wait briefly for the font so the first layout measures correctly; never block for long.
+  return Promise.race([new Promise(r => { l.onload = l.onerror = r; }).then(() => document.fonts && document.fonts.ready),
+    new Promise(r => setTimeout(r, 1200))]);
+}
+
+load().then(async data => {
+  await loadFont(data.bt && data.bt.font);
+  D = data; D.h0 = data.h || 180; lastW = innerWidth; lastH = innerHeight; render();
 }).catch(e => {
   root.innerHTML = '<div class="err">Price history is unavailable right now.</div>';
   console.error('Price history widget:', e);
