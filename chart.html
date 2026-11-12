@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Price history</title>
+<base target="_blank">
+<style>
+html,body{margin:0;background:transparent}
+body{font-family:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+.err{font:14px/1.4 system-ui,sans-serif;color:#7a7974;padding:24px;text-align:center;border:1px solid #e4e3df;border-radius:12px}
+</style>
+</head>
+<body>
+<div id="r"></div>
+<script src="widget.js"></script>
+<script>
+/*
+  Hosted viewer. Data comes from either:
+    chart.html#d=<packed>          chart data packed into the link (deflate + base64url)
+    chart.html?src=<url-to-.json>  a JSON data file hosted elsewhere (must allow cross-origin reads)
+  The chart stretches to fill whatever height the iframe has.
+*/
+async function unpack(s) {
+  const b64 = s.replace(/-/g, '+').replace(/_/g, '/');
+  const bin = atob(b64 + '==='.slice((b64.length + 3) % 4));
+  const bytes = Uint8Array.from(bin, c => c.charCodeAt(0));
+  const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('deflate-raw'));
+  const D = JSON.parse(await new Response(stream).text());
+  if (D.z) D.series.forEach(s => { // undo delta encoding
+    for (let i = 2; i + 1 < s.p.length; i += 2) { s.p[i] += s.p[i - 2]; s.p[i + 1] += s.p[i - 1]; }
+  });
+  return D;
+}
+
+async function load() {
+  const hash = new URLSearchParams(location.hash.slice(1));
+  const query = new URLSearchParams(location.search);
+  if (hash.get('d')) return unpack(hash.get('d'));
+  const src = query.get('src') || hash.get('src');
+  if (src) {
+    const res = await fetch(new URL(src, location.href), { cache: 'no-cache' });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    return res.json();
+  }
+  throw new Error('no data');
+}
+
+const root = document.getElementById('r');
+let D = null;
+
+// Fit the chart so the whole widget fills the iframe exactly (no inner scrollbar).
+function render() {
+  const tryH = D.h0 || 260;
+  D.h = tryH;
+  PHWidget(root, D, WIDGET_CSS);
+  const overhead = root.getBoundingClientRect().height - tryH;
+  const fit = Math.round(Math.max(140, Math.min(640, innerHeight - overhead - 2)));
+  if (Math.abs(fit - tryH) > 2) { D.h = fit; PHWidget(root, D, WIDGET_CSS); }
+}
+
+let lastW = 0, lastH = 0;
+addEventListener('resize', () => {
+  if (!D || (innerWidth === lastW && innerHeight === lastH)) return;
+  lastW = innerWidth; lastH = innerHeight; render();
+});
+
+load().then(data => {
+  D = data; D.h0 = data.h || 260; lastW = innerWidth; lastH = innerHeight; render();
+}).catch(e => {
+  root.innerHTML = '<div class="err">Price history is unavailable right now.</div>';
+  console.error('Price history widget:', e);
+});
+</script>
+</body>
+</html>
