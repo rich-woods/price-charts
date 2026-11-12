@@ -14,7 +14,10 @@ body{font-family:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-
 </head>
 <body>
 <div id="r"></div>
-<script src="widget.js"></script>
+<script>
+  // Load widget.js with the same version as this page's ?v= so cached copies are never mixed.
+  document.write('<script src="widget.js?v=' + encodeURIComponent(new URLSearchParams(location.search).get('v') || '3') + '"><\/script>');
+</script>
 <script>
 /*
   Hosted viewer. Data comes from either:

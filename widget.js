@@ -1,5 +1,9 @@
 /* Price history widget: shared by the generator (index.html) and the hosted viewer (chart.html). */
 
+// Bump this (and the fallback in chart.html) whenever widget.js or chart.html changes,
+// so new embeds load the new code instead of a cached copy.
+const PHW_VERSION = '3';
+
 // Site themes. l/d = brand color on light/dark surfaces (both >= 3:1 against the surface),
 // lt/dt = button text on that brand color. Colors taken from each site's live stylesheet.
 const PHW_BRANDS = {
